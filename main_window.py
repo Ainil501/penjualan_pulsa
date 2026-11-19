@@ -1,8 +1,15 @@
 import sys
+import os
 
-from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
+from PyQt6.QtWidgets import (
+    QApplication, QMainWindow, QTabWidget,
+    QPushButton, QVBoxLayout, QWidget
+)
 
+from riwayat_transaksi import halaman_riwayat
+from daftar_pelanggan import halaman_pelanggan
+from pembelian_pulsa import halaman_pembelian
+from detail_transaksi import halaman_detail
 
 
 class MainWindow(QMainWindow):
@@ -11,15 +18,39 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Penjualan Pulsa")
 
+        if not os.path.exists("penjualan_pulsa.sqlite"):
+            buat_database()
+
+            
+        # Membuat halaman
+        self.riwayat = halaman_riwayat(self.buka_pelanggan)
+        self.pelanggan = halaman_pelanggan()
+        self.pembelian = halaman_pembelian()
+        self.detail = halaman_detail()
+
+        # Membuat tab
         self.tabs = QTabWidget()
         self.tabs.tabBar().hide()
 
-        #tambah disini
-        self.tabs.addTab(, "riwayat")
+        self.tabs.addTab(self.riwayat, "Riwayat")
+        self.tabs.addTab(self.pelanggan, "Pelanggan")
+        self.tabs.addTab(self.pembelian, "Pembelian")
+        self.tabs.addTab(self.detail, "Detail")
 
         self.setCentralWidget(self.tabs)
 
+    # Function navigasi
+    def buka_riwayat(self):
+        self.tabs.setCurrentWidget(self.riwayat)
 
+    def buka_pelanggan(self):
+        self.tabs.setCurrentWidget(self.pelanggan)
+
+    def buka_pembelian(self):
+        self.tabs.setCurrentWidget(self.pembelian)
+
+    def buka_detail(self):
+        self.tabs.setCurrentWidget(self.detail)
 
 
 if __name__ == "__main__":
