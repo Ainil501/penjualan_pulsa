@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment
+venv/
+.venv/
+
+# PyQt / Qt cache
+.qt/
