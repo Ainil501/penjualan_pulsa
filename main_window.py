@@ -10,6 +10,7 @@ from riwayat_transaksi import halaman_riwayat
 from daftar_pelanggan import halaman_pelanggan
 from pembelian_pulsa import halaman_pembelian
 from detail_transaksi import halaman_detail
+from database import buat_database
 
 
 class MainWindow(QMainWindow):
@@ -17,16 +18,17 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Penjualan Pulsa")
+        self.setGeometry(300,300,500,600)
 
-        if not os.path.exists("penjualan_pulsa.sqlite"):
-            buat_database()
+        # if not os.path.exists("penjualan_pulsa.sqlite"):
+        #     buat_database()
 
             
         # Membuat halaman
-        self.riwayat = halaman_riwayat(self.buka_pelanggan)
+        self.riwayat = halaman_riwayat()
         self.pelanggan = halaman_pelanggan()
         self.pembelian = halaman_pembelian()
-        self.detail = halaman_detail()
+        self.detail, self.label_id = halaman_detail()
 
         # Membuat tab
         self.tabs = QTabWidget()
@@ -49,7 +51,8 @@ class MainWindow(QMainWindow):
     def buka_pembelian(self):
         self.tabs.setCurrentWidget(self.pembelian)
 
-    def buka_detail(self):
+    def buka_detail(self, id_transaksi):
+        self.label_id.setText(f"ID Transaksi: {id_transaksi}")
         self.tabs.setCurrentWidget(self.detail)
 
 
