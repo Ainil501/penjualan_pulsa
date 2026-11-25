@@ -96,13 +96,14 @@ def ambil_semua_transaksi():
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
+    # ASC = urut dari kecil ke besar (1, 2, 3, ...)
     cur.execute("""
         SELECT t.id, t.tanggal, t.nama, d.nama_paket,
                t.total_bayar, t.status
         FROM transaksi t
         JOIN detail_transaksi d
         ON d.transaksi_id = t.id
-        ORDER BY t.id DESC
+        ORDER BY t.id ASC
     """)
 
     rows = cur.fetchall()
@@ -230,7 +231,7 @@ class Riwayat(QWidget):
         self.tabel = QTableWidget()
         self.tabel.setColumnCount(6)
         self.tabel.setHorizontalHeaderLabels(
-            ["ID", "Tanggal", "Nama", "Paket", "Total", "Status"]
+            ["No", "Tanggal", "Nama", "Paket", "Total", "Status"]
         )
         self.tabel.setEditTriggers(
             QAbstractItemView.EditTrigger.NoEditTriggers
@@ -264,15 +265,23 @@ class Riwayat(QWidget):
         self.tabel.setRowCount(len(rows))
 
         for r, (id_, tgl, nama, paket, total, status) in enumerate(rows):
-            nilai = [str(id_), tgl, nama, paket,
-                     f"Rp {rupiah(total)}", status]
 
-            for c, teks in enumerate(nilai):
+            # Kolom 0: nomor urut (1, 2, 3, ...), ID asli disimpan tersembunyi
+            item_no = QTableWidgetItem(str(r + 1))
+            item_no.setData(Qt.ItemDataRole.UserRole, id_)
+            self.tabel.setItem(r, 0, item_no)
+
+            nilai = [tgl, nama, paket, f"Rp {rupiah(total)}", status]
+
+            for c, teks in enumerate(nilai, start=1):
                 self.tabel.setItem(r, c, QTableWidgetItem(teks))
 
     def klik_baris(self, row, column):
 
-        id_transaksi = int(self.tabel.item(row, 0).text())
+        # Ambil ID asli dari database, bukan nomor urut yang tampil
+        id_transaksi = self.tabel.item(row, 0).data(
+            Qt.ItemDataRole.UserRole
+        )
 
         self.buka_detail(id_transaksi)
 
