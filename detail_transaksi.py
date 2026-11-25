@@ -11,8 +11,10 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QMainWindow,
     QTabWidget,
-    QListWidget,
-    QListWidgetItem
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QAbstractItemView,
 )
 
 DB_NAME = "pulsa.db"
@@ -67,24 +69,6 @@ def init_db():
     conn.close()
 
 
-def ambil_semua_transaksi():
-
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT id, tanggal, nama, total_bayar
-        FROM transaksi
-        ORDER BY id DESC
-    """)
-
-    rows = cur.fetchall()
-
-    conn.close()
-
-    return rows
-
-
 def ambil_transaksi(id_transaksi):
 
     conn = sqlite3.connect(DB_NAME)
@@ -105,6 +89,27 @@ def ambil_transaksi(id_transaksi):
     conn.close()
 
     return row
+
+
+def ambil_semua_transaksi():
+
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT t.id, t.tanggal, t.nama, d.nama_paket,
+               t.total_bayar, t.status
+        FROM transaksi t
+        JOIN detail_transaksi d
+        ON d.transaksi_id = t.id
+        ORDER BY t.id DESC
+    """)
+
+    rows = cur.fetchall()
+
+    conn.close()
+
+    return rows
 
 
 def tambah_transaksi(tanggal, status, nama, nomor_hp,
@@ -137,7 +142,7 @@ def rupiah(angka):
     return f"{angka:,}".replace(",", ".")
 
 
-def halaman_detail(kembali):
+def halaman_detail():
 
     widget = QWidget()
 
@@ -158,7 +163,12 @@ def halaman_detail(kembali):
     label_total = QLabel("Total Bayar: -")
 
     btn = QPushButton("Kembali")
-    btn.clicked.connect(kembali)
+
+    def navigasi():
+        window = QApplication.activeWindow()
+        window.buka_riwayat()
+
+    btn.clicked.connect(navigasi)
 
     def tampilkan(id_transaksi):
 
@@ -199,13 +209,12 @@ def halaman_detail(kembali):
     layout.addWidget(label_paket)
     layout.addWidget(label_nominal)
     layout.addWidget(label_total)
-    layout.addStretch()
 
     widget.setLayout(layout)
 
     widget.tampilkan = tampilkan
 
-    return widget
+    return widget, label_id
 
 
 class Riwayat(QWidget):
@@ -215,38 +224,55 @@ class Riwayat(QWidget):
 
         self.buka_detail = buka_detail
 
-        self.daftar = QListWidget()
-        self.daftar.itemClicked.connect(self.klik_item)
+        judul = QLabel("Riwayat Transaksi / Beranda")
+        judul.setFont(QFont("Arial", 16))
+
+        self.tabel = QTableWidget()
+        self.tabel.setColumnCount(6)
+        self.tabel.setHorizontalHeaderLabels(
+            ["ID", "Tanggal", "Nama", "Paket", "Total", "Status"]
+        )
+        self.tabel.setEditTriggers(
+            QAbstractItemView.EditTrigger.NoEditTriggers
+        )
+        self.tabel.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.tabel.verticalHeader().setVisible(False)
+        self.tabel.horizontalHeader().setSectionResizeMode(
+            QHeaderView.ResizeMode.Stretch
+        )
+
+        self.tabel.cellClicked.connect(self.klik_baris)
 
         btn_tambah = QPushButton("Tambah Transaksi Contoh")
         btn_tambah.clicked.connect(self.klik_tambah)
 
         layout = QVBoxLayout()
-
-        layout.addWidget(QLabel("Riwayat Transaksi / Beranda"))
-        layout.addWidget(self.daftar)
+        layout.addWidget(judul)
+        layout.addWidget(self.tabel)
         layout.addWidget(btn_tambah)
 
         self.setLayout(layout)
 
-        self.muat_daftar()
+        self.muat_data()
 
-    def muat_daftar(self):
+    def muat_data(self):
 
-        self.daftar.clear()
+        rows = ambil_semua_transaksi()
 
-        for (id_, tanggal, nama, total) in ambil_semua_transaksi():
+        self.tabel.setRowCount(len(rows))
 
-            item = QListWidgetItem(
-                f"#{id_}  |  {tanggal}  |  {nama}  |  Rp {rupiah(total)}"
-            )
-            item.setData(Qt.ItemDataRole.UserRole, id_)
+        for r, (id_, tgl, nama, paket, total, status) in enumerate(rows):
+            nilai = [str(id_), tgl, nama, paket,
+                     f"Rp {rupiah(total)}", status]
 
-            self.daftar.addItem(item)
+            for c, teks in enumerate(nilai):
+                self.tabel.setItem(r, c, QTableWidgetItem(teks))
 
-    def klik_item(self, item):
+    def klik_baris(self, row, column):
 
-        id_transaksi = item.data(Qt.ItemDataRole.UserRole)
+        id_transaksi = int(self.tabel.item(row, 0).text())
 
         self.buka_detail(id_transaksi)
 
@@ -262,8 +288,7 @@ class Riwayat(QWidget):
             27000
         )
 
-        self.muat_daftar()
-
+        self.muat_data()
         self.buka_detail(id_baru)
 
 
@@ -273,13 +298,13 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("Detail Transaksi")
-        self.resize(480, 560)
+        self.resize(560, 560)
 
         self.tabs = QTabWidget()
 
         self.riwayat = Riwayat(self.buka_detail)
 
-        self.detail = halaman_detail(self.buka_riwayat)
+        self.detail, self.label_id = halaman_detail()
 
         self.tabs.addTab(self.riwayat, "Riwayat")
         self.tabs.addTab(self.detail, "Detail")
