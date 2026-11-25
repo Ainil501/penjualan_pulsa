@@ -8,13 +8,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
     QVBoxLayout,
-    QPushButton,
     QMainWindow,
-    QTabWidget,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
-    QAbstractItemView,
 )
 
 DB_NAME = "pulsa.db"
@@ -113,30 +107,6 @@ def ambil_semua_transaksi():
     return rows
 
 
-def tambah_transaksi(tanggal, status, nama, nomor_hp,
-                     nama_paket, nominal, total_bayar):
-
-    conn = sqlite3.connect(DB_NAME)
-    cur = conn.cursor()
-
-    cur.execute("""
-        INSERT INTO transaksi
-        (tanggal, status, nama, nomor_hp, total_bayar)
-        VALUES (?, ?, ?, ?, ?)
-    """, (tanggal, status, nama, nomor_hp, total_bayar))
-
-    id_baru = cur.lastrowid
-
-    cur.execute("""
-        INSERT INTO detail_transaksi
-        (transaksi_id, nama_paket, nominal)
-        VALUES (?, ?, ?)
-    """, (id_baru, nama_paket, nominal))
-
-    conn.commit()
-    conn.close()
-
-    return id_baru
 
 
 def rupiah(angka):
@@ -162,14 +132,6 @@ def halaman_detail():
     label_paket = QLabel("Nama Paket: -")
     label_nominal = QLabel("Nominal: -")
     label_total = QLabel("Total Bayar: -")
-
-    btn = QPushButton("Kembali")
-
-    def navigasi():
-        window = QApplication.activeWindow()
-        window.buka_riwayat()
-
-    btn.clicked.connect(navigasi)
 
     def tampilkan(id_transaksi):
 
@@ -200,7 +162,6 @@ def halaman_detail():
         label_nominal.setText(f"Nominal: Rp {rupiah(nominal)}")
         label_total.setText(f"Total Bayar: Rp {rupiah(total)}")
 
-    layout.addWidget(btn)
     layout.addWidget(judul)
     layout.addWidget(label_id)
     layout.addWidget(label_tanggal)
@@ -218,89 +179,6 @@ def halaman_detail():
     return widget, label_id
 
 
-class Riwayat(QWidget):
-
-    def __init__(self, buka_detail):
-        super().__init__()
-
-        self.buka_detail = buka_detail
-
-        judul = QLabel("Riwayat Transaksi / Beranda")
-        judul.setFont(QFont("Arial", 16))
-
-        self.tabel = QTableWidget()
-        self.tabel.setColumnCount(6)
-        self.tabel.setHorizontalHeaderLabels(
-            ["No", "Tanggal", "Nama", "Paket", "Total", "Status"]
-        )
-        self.tabel.setEditTriggers(
-            QAbstractItemView.EditTrigger.NoEditTriggers
-        )
-        self.tabel.setSelectionBehavior(
-            QAbstractItemView.SelectionBehavior.SelectRows
-        )
-        self.tabel.verticalHeader().setVisible(False)
-        self.tabel.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
-
-        self.tabel.cellClicked.connect(self.klik_baris)
-
-        btn_tambah = QPushButton("Tambah Transaksi Contoh")
-        btn_tambah.clicked.connect(self.klik_tambah)
-
-        layout = QVBoxLayout()
-        layout.addWidget(judul)
-        layout.addWidget(self.tabel)
-        layout.addWidget(btn_tambah)
-
-        self.setLayout(layout)
-
-        self.muat_data()
-
-    def muat_data(self):
-
-        rows = ambil_semua_transaksi()
-
-        self.tabel.setRowCount(len(rows))
-
-        for r, (id_, tgl, nama, paket, total, status) in enumerate(rows):
-
-            # Kolom 0: nomor urut (1, 2, 3, ...), ID asli disimpan tersembunyi
-            item_no = QTableWidgetItem(str(r + 1))
-            item_no.setData(Qt.ItemDataRole.UserRole, id_)
-            self.tabel.setItem(r, 0, item_no)
-
-            nilai = [tgl, nama, paket, f"Rp {rupiah(total)}", status]
-
-            for c, teks in enumerate(nilai, start=1):
-                self.tabel.setItem(r, c, QTableWidgetItem(teks))
-
-    def klik_baris(self, row, column):
-
-        # Ambil ID asli dari database, bukan nomor urut yang tampil
-        id_transaksi = self.tabel.item(row, 0).data(
-            Qt.ItemDataRole.UserRole
-        )
-
-        self.buka_detail(id_transaksi)
-
-    def klik_tambah(self):
-
-        id_baru = tambah_transaksi(
-            "12/10/2026",
-            "berhasil",
-            "dewi",
-            "08777",
-            "paket hemat",
-            25000,
-            27000
-        )
-
-        self.muat_data()
-        self.buka_detail(id_baru)
-
-
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -309,26 +187,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Detail Transaksi")
         self.resize(560, 560)
 
-        self.tabs = QTabWidget()
-
-        self.riwayat = Riwayat(self.buka_detail)
-
         self.detail, self.label_id = halaman_detail()
 
-        self.tabs.addTab(self.riwayat, "Riwayat")
-        self.tabs.addTab(self.detail, "Detail")
+        self.setCentralWidget(self.detail)
 
-        self.setCentralWidget(self.tabs)
-
-    def buka_detail(self, id_transaksi):
-
-        self.detail.tampilkan(id_transaksi)
-
-        self.tabs.setCurrentWidget(self.detail)
-
-    def buka_riwayat(self):
-
-        self.tabs.setCurrentWidget(self.riwayat)
+        # Tampilkan transaksi pertama (ganti ID sesuai kebutuhan)
+        self.detail.tampilkan(1)
 
 
 if __name__ == "__main__":
