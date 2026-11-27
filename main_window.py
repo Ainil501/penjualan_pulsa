@@ -8,9 +8,11 @@ from PyQt6.QtWidgets import (
 
 from riwayat_transaksi import halaman_riwayat
 from daftar_pelanggan import halaman_pelanggan
-from pembelian_pulsa import halaman_pembelian
+# from pembelian_pulsa import halaman_pembelian
 from detail_transaksi import halaman_detail
 from database import buat_database
+
+from riwayat_transaksi import halaman_riwayat, load_data as load_riwayat
 
 
 class MainWindow(QMainWindow):
@@ -20,14 +22,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Penjualan Pulsa")
         self.setGeometry(300,300,500,600)
 
-        # if not os.path.exists("penjualan_pulsa.sqlite"):
-        #     buat_database()
+        if not os.path.exists("penjualan_pulsa.sqlite"):
+            buat_database()
 
             
         # Membuat halaman
         self.riwayat = halaman_riwayat()
         self.pelanggan = halaman_pelanggan()
-        self.pembelian = halaman_pembelian()
+        # self.pembelian = halaman_pembelian()
         self.detail, self.label_id = halaman_detail()
 
         # Membuat tab
@@ -36,20 +38,21 @@ class MainWindow(QMainWindow):
 
         self.tabs.addTab(self.riwayat, "Riwayat")
         self.tabs.addTab(self.pelanggan, "Pelanggan")
-        self.tabs.addTab(self.pembelian, "Pembelian")
+        # self.tabs.addTab(self.pembelian, "Pembelian")
         self.tabs.addTab(self.detail, "Detail")
 
         self.setCentralWidget(self.tabs)
 
     # Function navigasi
     def buka_riwayat(self):
+        load_riwayat()
         self.tabs.setCurrentWidget(self.riwayat)
 
     def buka_pelanggan(self):
         self.tabs.setCurrentWidget(self.pelanggan)
 
-    def buka_pembelian(self):
-        self.tabs.setCurrentWidget(self.pembelian)
+    # def buka_pembelian(self):
+    #     self.tabs.setCurrentWidget(self.pembelian)
 
     def buka_detail(self, id_transaksi):
         self.label_id.setText(f"ID Transaksi: {id_transaksi}")
